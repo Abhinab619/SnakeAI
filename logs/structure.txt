@@ -1,0 +1,6 @@
+snake_rl/
+│
+├── agent.py        # DQN Agent
+├── model.py        # Neural Network
+├── game.py         # Game logic (environment)
+└── train.py        # Training loop

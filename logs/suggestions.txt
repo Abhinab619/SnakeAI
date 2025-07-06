@@ -1,0 +1,61 @@
+1. Openness
+
+
+
+# Already calculated in get_state()
+# free_ahead, free_left, free_right: values 0 to 1
+
+openness_score = free_ahead + 0.5 * (free_left + free_right)
+if openness_score < 0.5:
+    reward -= 0.5  # risky path
+elif openness_score > 2.0:
+    reward += 0.2  # open area
+
+
+
+
+
+2. Small reward for approaching food
+
+✅ How To Do It:
+🔧 1. Track Previous Distance to Food
+In your SnakeGameAI class, add this to __init__():
+
+python
+Copy
+Edit
+self.prev_distance_to_food = None
+🧠 2. Calculate Distance in play_step()
+Update this logic after moving the snake, but before checking for food:
+
+python
+Copy
+Edit
+# Calculate distance to food
+current_distance = abs(self.head.x - self.food.x) + abs(self.head.y - self.food.y)
+
+if self.prev_distance_to_food is not None:
+    if current_distance < self.prev_distance_to_food:
+        reward += 0.2  # Moved closer to food
+    elif current_distance > self.prev_distance_to_food:
+        reward -= 0.1  # Moved away from food
+
+self.prev_distance_to_food = current_distance  # Update for next step
+You can use Manhattan Distance as above, or Euclidean (math.sqrt(...)) if you prefer, but Manhattan is simpler and aligns well with the grid nature of the game.
+
+✅ 3. Reset on Eating Food
+Inside this block:
+
+python
+Copy
+Edit
+if self.head == self.food:
+    self.score += 1
+    reward = 10
+    self._place_food()
+    self.steps_since_food = 0
+    self.prev_distance_to_food = None  # Reset after eating
+
+
+
+(have to add the openness logic as it is still hitting its body at around 250 games and 6.5 avg score)

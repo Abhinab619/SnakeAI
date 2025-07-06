@@ -1,0 +1,204 @@
+# changes in  get_state 
+
+
+def get_state(self, game):
+    head = game.snake[0]
+
+    # Get the next positions based on absolute directions
+    point_l = Point(head.x - 20, head.y)
+    point_r = Point(head.x + 20, head.y)
+    point_u = Point(head.x, head.y - 20)
+    point_d = Point(head.x, head.y + 20)
+
+    dir_l = game.direction == Direction.LEFT
+    dir_r = game.direction == Direction.RIGHT
+    dir_u = game.direction == Direction.UP
+    dir_d = game.direction == Direction.DOWN
+
+    # Map relative directions based on current heading
+    if dir_r:
+        point_straight = point_r
+        point_right = point_d
+        point_left = point_u
+    elif dir_l:
+        point_straight = point_l
+        point_right = point_u
+        point_left = point_d
+    elif dir_u:
+        point_straight = point_u
+        point_right = point_r
+        point_left = point_l
+    else:  # dir_d
+        point_straight = point_d
+        point_right = point_l
+        point_left = point_r
+
+    state = [
+        # Danger in relative directions
+        int(game.is_collision(point_straight)),  # Danger straight
+        int(game.is_collision(point_right)),     # Danger right
+        int(game.is_collision(point_left)),      # Danger left
+
+        # Current move direction (absolute)
+        int(dir_l),
+        int(dir_r),
+        int(dir_u),
+        int(dir_d),
+
+        # Food location (relative to head)
+        int(game.food.x < head.x),  # Food left
+        int(game.food.x > head.x),  # Food right
+        int(game.food.y < head.y),  # Food up
+        int(game.food.y > head.y)   # Food down
+    ]
+
+    return np.array(state, dtype=int)
+
+
+
+## This was the previous code::
+
+def get_state(self, game):
+        head = game.snake[0]
+        point_l = Point(head.x - 20, head.y)
+        point_r = Point(head.x + 20, head.y)
+        point_u = Point(head.x, head.y - 20)
+        point_d = Point(head.x, head.y + 20)
+
+        dir_l = game.direction == Direction.LEFT
+        dir_r = game.direction == Direction.RIGHT
+        dir_u = game.direction == Direction.UP
+        dir_d = game.direction == Direction.DOWN
+
+        state = [
+            # Danger straight
+            (dir_r and game.is_collision(point_r)) or
+            (dir_l and game.is_collision(point_l)) or
+            (dir_u and game.is_collision(point_u)) or
+            (dir_d and game.is_collision(point_d)),
+
+            # Danger right
+            (dir_u and game.is_collision(point_r)) or
+            (dir_d and game.is_collision(point_l)) or
+            (dir_l and game.is_collision(point_u)) or
+            (dir_r and game.is_collision(point_d)),
+
+            # Danger left
+            (dir_d and game.is_collision(point_r)) or
+            (dir_u and game.is_collision(point_l)) or
+            (dir_r and game.is_collision(point_u)) or
+            (dir_l and game.is_collision(point_d)),
+
+            # Move direction
+            dir_l,
+            dir_r,
+            dir_u,
+            dir_d,
+
+            # Food location
+            game.food.x < game.head.x,
+            game.food.x > game.head.x,
+            game.food.y < game.head.y,
+            game.food.y > game.head.y
+        ]
+
+        return np.array(state, dtype=int)
+
+
+### change again (v3)
+## also changed this : self.model = Linear_QNet(11, 256, 3) ---to---this--- self.model = Linear_QNet(14, 256, 3)
+from __init__ of the agent
+
+
+
+def get_state(self, game):
+    head = game.snake[0]
+
+    # Direction flags
+    dir_l = game.direction == Direction.LEFT
+    dir_r = game.direction == Direction.RIGHT
+    dir_u = game.direction == Direction.UP
+    dir_d = game.direction == Direction.DOWN
+
+    # Relative points
+    def move_in_direction(point, direction):
+        if direction == Direction.RIGHT:
+            return Point(point.x + 20, point.y)
+        elif direction == Direction.LEFT:
+            return Point(point.x - 20, point.y)
+        elif direction == Direction.UP:
+            return Point(point.x, point.y - 20)
+        elif direction == Direction.DOWN:
+            return Point(point.x, point.y + 20)
+
+    # Get relative directions
+    if dir_r:
+        dir_straight = Direction.RIGHT
+        dir_right = Direction.DOWN
+        dir_left = Direction.UP
+    elif dir_l:
+        dir_straight = Direction.LEFT
+        dir_right = Direction.UP
+        dir_left = Direction.DOWN
+    elif dir_u:
+        dir_straight = Direction.UP
+        dir_right = Direction.RIGHT
+        dir_left = Direction.LEFT
+    else:
+        dir_straight = Direction.DOWN
+        dir_right = Direction.LEFT
+        dir_left = Direction.RIGHT
+
+    # Danger
+    danger_straight = int(game.is_collision(move_in_direction(head, dir_straight)))
+    danger_right = int(game.is_collision(move_in_direction(head, dir_right)))
+    danger_left = int(game.is_collision(move_in_direction(head, dir_left)))
+
+    # Free space ahead in each direction (up to N steps)
+    def free_blocks_in_direction(start_point, direction, max_steps=10):
+        count = 0
+        point = start_point
+        for _ in range(max_steps):
+            point = move_in_direction(point, direction)
+            if game.is_collision(point):
+                break
+            count += 1
+        return count / max_steps  # normalize (0 to 1)
+
+    free_ahead = free_blocks_in_direction(head, dir_straight)
+    free_right = free_blocks_in_direction(head, dir_right)
+    free_left = free_blocks_in_direction(head, dir_left)
+
+    # Food direction
+    food_left = int(game.food.x < head.x)
+    food_right = int(game.food.x > head.x)
+    food_up = int(game.food.y < head.y)
+    food_down = int(game.food.y > head.y)
+
+    # Final state (length = 14)
+    state = [
+        # Danger
+        danger_straight,
+        danger_right,
+        danger_left,
+
+        # Direction
+        int(dir_l),
+        int(dir_r),
+        int(dir_u),
+        int(dir_d),
+
+        # Food direction
+        food_left,
+        food_right,
+        food_up,
+        food_down,
+
+        # Free space (normalized)
+        free_ahead,
+        free_right,
+        free_left
+    ]
+
+    return np.array(state, dtype=float)
+
