@@ -9,7 +9,7 @@ font = pygame.font.Font(None, 30)
 
 # Constants
 BLOCK_SIZE = 20
-SPEED = 40
+SPEED = 100
 
 # Directions
 class Direction(Enum):
@@ -88,8 +88,12 @@ class SnakeGameAI:
             reward = -10
             game_over = True
 
+        if self.is_collision_body():
+            reward = -15
+            game_over = True
+
         elif self.head == self.food:
-            reward = +15
+            reward = 12
             self.score += 1
             self._place_food()
             self.steps_since_food = 0
@@ -101,9 +105,9 @@ class SnakeGameAI:
 
             if self.prev_distance_to_food is not None:
                 if new_distance < self.prev_distance_to_food:
-                    reward += 1  # moved closer
+                    reward += 0.5  # moved closer
                 elif new_distance > self.prev_distance_to_food:
-                    reward -= 1  # moved away
+                    reward -= 0.25  # moved away
 
             self.prev_distance_to_food = new_distance
 
@@ -111,7 +115,7 @@ class SnakeGameAI:
         base_timeout = 200
         max_steps_without_food = max(base_timeout, 30 * len(self.snake))
         if self.steps_since_food > max_steps_without_food:
-            reward = -10
+            reward = -5
             game_over = True
   
 
@@ -129,6 +133,9 @@ class SnakeGameAI:
         if pt.x > self.w - BLOCK_SIZE or pt.x < 0 or pt.y > self.h - BLOCK_SIZE or pt.y < 0:
             return True
         # Hits itself
+    def is_collision_body(self,pt=None):
+        if pt is None:
+            pt = self.head
         if pt in self.snake[1:]:
             return True
         return False
