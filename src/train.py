@@ -1,6 +1,7 @@
 from agent import Agent
 from game import SnakeGameAI
 from utils import plot, plot_rewards_vs_scores
+import copy
 
 scores = []
 mean_scores = []
@@ -48,6 +49,27 @@ def train():
 
             # Plot Reward vs Score at end of each game (separate plot)
             plot_rewards_vs_scores(game_rewards, game_scores)
+
+            # Save step-by-step logs for this game
+            
+            game_step_logs = copy.deepcopy(game.step_logs)  # To avoid overwrite by reference
+            game.step_logs.clear()  # Clear for next game
+
+            # Maintain in-memory log of last 200 games
+            if not hasattr(train, "recent_logs"):
+                train.recent_logs = []
+
+            log_entry = f"\n--- Game {agent.n_games} ---\n"
+            log_entry += "\n".join([f"Step {i+1}: {step}" for i, step in enumerate(game_step_logs)])
+            train.recent_logs.append(log_entry)
+
+            # Keep only last 200 games
+            if len(train.recent_logs) > 200:
+                train.recent_logs.pop(0)
+
+            # Write to file (overwrite with last 200)
+            with open("reward_logs.txt", "w") as f:
+                f.write("\n".join(train.recent_logs))
 
             if score > record:
                 record = score

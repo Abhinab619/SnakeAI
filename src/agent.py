@@ -138,7 +138,24 @@ class Agent:
         self.trainer.train_step(state, action, reward, next_state, done)
 
     def get_action(self, state):
-        self.epsilon = max(3, 80 * (0.995 ** self.n_games))  # explore vs exploit
+        if self.n_games < 300:
+            # Decay from 1.0 to ~0.3
+            decay_frac = self.n_games / 300
+            self.epsilon = max(0.3, 1.0 * ((1 - decay_frac) ** 1.5))
+        elif self.n_games < 500:
+            # Bump up again from 0.3 to ~0.5 to encourage more exploration while snake is growing
+            bump_frac = (self.n_games - 300) / 200
+            self.epsilon = 0.3 + 0.2 * (bump_frac ** 0.5)  # Goes up to ~0.5
+        elif self.n_games < 900:
+            # Decay from 0.5 to 0.05
+            decay_frac = (self.n_games - 500) / 400
+            self.epsilon = max(0.05, 0.5 * ((1 - decay_frac) ** 2))
+        else:
+            self.epsilon = 0.05
+
+
+
+
         final_move = [0, 0, 0]
         if random.randint(0, 200) < self.epsilon:
             move = random.randint(0, 2)
